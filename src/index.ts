@@ -1,3 +1,15 @@
-import { createStore } from './core/createStore';
+import {
+  createStore,
+  GetValueHook,
+  SetValueHook,
+  SetValueAction,
+  LazyIntializedValue,
+} from './core/createStore';
 
-export { createStore };
+export {
+  createStore,
+  GetValueHook,
+  SetValueHook,
+  SetValueAction,
+  LazyIntializedValue,
+};

@@ -3,7 +3,7 @@ import { createStore } from '..';
 
 type Count = number;
 
-const [useCount, setCount, getCount] = createStore<Count>(0);
+const [useCount, setCount, getCount] = createStore<Count>(() => 0);
 
 function increaseOneCount() {
   setCount(count => count + 1);

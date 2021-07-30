@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
-interface GetValueHook<T> {
+export interface GetValueHook<T> {
   (value: T, key: string): T;
 }
 
-interface SetValueHook<T> {
+export interface SetValueHook<T> {
   (value: T, key: string): T;
 }
 
@@ -12,7 +12,7 @@ interface OnValue {
   (): void;
 }
 
-interface Option<T> {
+export interface Option<T> {
   key?: string;
   getValueHook?: GetValueHook<T>;
   setValueHook?: SetValueHook<T>;
@@ -22,7 +22,7 @@ interface UseValue<T> {
   (): T;
 }
 
-interface SetValueAction<T> {
+export interface SetValueAction<T> {
   (currentValue: T): T;
 }
 
@@ -31,6 +31,10 @@ interface SetValue<T> {
 }
 
 interface GetValue<T> {
+  (): T;
+}
+
+export interface LazyIntializedValue<T> {
   (): T;
 }
 
@@ -43,34 +47,62 @@ function isSetValueAction<T>(
   return false;
 }
 
+function isLazyIntializedValue<T>(
+  next: T | LazyIntializedValue<T>,
+): next is LazyIntializedValue<T> {
+  if (typeof next === 'function') {
+    return true;
+  }
+  return false;
+}
+
 export function createStore<T>(
-  initialValue: T,
+  initialValue: T | LazyIntializedValue<T>,
   option?: Option<T>,
 ): [UseValue<T>, SetValue<T>, GetValue<T>] {
+  function getIntializedValue() {
+    if (isLazyIntializedValue(initialValue)) {
+      return initialValue();
+    } else {
+      return initialValue;
+    }
+  }
+
   const key = option?.key || `store-${Math.random()}`;
   const getValueHook = option?.getValueHook;
   const setValueHook = option?.setValueHook;
-  let value: T = initialValue;
+  let value: T | undefined;
 
   const onValueSet: Set<OnValue> = new Set();
 
-  function setValue(next: T | SetValueAction<T>) {
-    let nextValue = value;
-    if (isSetValueAction(next)) {
-      nextValue = next(value);
+  function setValue(next?: T | SetValueAction<T>) {
+    if (next === undefined) {
+      value = undefined;
+      onValueSet.forEach(onValue => onValue());
     } else {
-      nextValue = next;
+      if (isSetValueAction(next)) {
+        let nextValue = next(value || getIntializedValue());
+        if (setValueHook !== undefined) {
+          nextValue = setValueHook(nextValue, key);
+        }
+        value = nextValue;
+        onValueSet.forEach(onValue => onValue());
+      } else {
+        let nextValue = next;
+        if (setValueHook !== undefined) {
+          nextValue = setValueHook(nextValue, key);
+        }
+        value = nextValue;
+        onValueSet.forEach(onValue => onValue());
+      }
     }
-    if (setValueHook !== undefined) {
-      nextValue = setValueHook(nextValue, key);
-    }
-    value = nextValue;
-    onValueSet.forEach(onValue => onValue());
   }
 
   function getValue() {
     const nextValue =
-      getValueHook !== undefined ? getValueHook(value, key) : value;
+      getValueHook !== undefined
+        ? getValueHook(value || getIntializedValue(), key)
+        : value || getIntializedValue();
     return nextValue;
   }
 
@@ -85,7 +117,7 @@ export function createStore<T>(
   }
 
   function useValue() {
-    const [state, setState] = useState<T>(value);
+    const [state, setState] = useState<T>(value || getIntializedValue());
 
     useEffect(() => {
       function onValue() {
