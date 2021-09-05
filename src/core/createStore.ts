@@ -8,6 +8,10 @@ export interface SetValueHook<T> {
   (value: T, key: string): T;
 }
 
+export interface SetValueCallback<T> {
+  (value: T, key: string): void;
+}
+
 interface OnValue {
   (): void;
 }
@@ -16,6 +20,7 @@ export interface Option<T> {
   key?: string;
   getValueHook?: GetValueHook<T>;
   setValueHook?: SetValueHook<T>;
+  setValueCallback?: SetValueCallback<T>;
 }
 
 interface UseValue<T> {
@@ -80,21 +85,20 @@ export function createStore<T>(
       value = undefined;
       onValueSet.forEach(onValue => onValue());
     } else {
+      let nextValue = value;
       if (isSetValueAction(next)) {
-        let nextValue = next(value || getIntializedValue());
-        if (setValueHook !== undefined) {
-          nextValue = setValueHook(nextValue, key);
-        }
-        value = nextValue;
-        onValueSet.forEach(onValue => onValue());
+        nextValue = next(value || getIntializedValue());
       } else {
-        let nextValue = next;
-        if (setValueHook !== undefined) {
-          nextValue = setValueHook(nextValue, key);
-        }
-        value = nextValue;
-        onValueSet.forEach(onValue => onValue());
+        nextValue = next;
       }
+      if (setValueHook !== undefined) {
+        nextValue = setValueHook(nextValue, key);
+      }
+      value = nextValue;
+      onValueSet.forEach(onValue => onValue());
+    }
+    if (option?.setValueCallback !== undefined) {
+      option.setValueCallback(value || getIntializedValue(), key);
     }
   }
 
