@@ -5,6 +5,9 @@ import {
   SetValueCallback,
   SetValueAction,
   LazyIntializedValue,
+  UseValue,
+  SetValue,
+  GetValue,
 } from './core/createStore';
 
 export {
@@ -14,4 +17,7 @@ export {
   SetValueCallback,
   SetValueAction,
   LazyIntializedValue,
+  UseValue,
+  SetValue,
+  GetValue,
 };

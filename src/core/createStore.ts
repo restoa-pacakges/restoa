@@ -23,7 +23,7 @@ export interface Option<T> {
   setValueCallback?: SetValueCallback<T>;
 }
 
-interface UseValue<T> {
+export interface UseValue<T> {
   (): T;
 }
 
@@ -31,11 +31,11 @@ export interface SetValueAction<T> {
   (currentValue: T): T;
 }
 
-interface SetValue<T> {
+export interface SetValue<T> {
   (next: T | SetValueAction<T>): void;
 }
 
-interface GetValue<T> {
+export interface GetValue<T> {
   (): T;
 }
 
