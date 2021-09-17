@@ -8,6 +8,7 @@ import {
   UseValue,
   SetValue,
   GetValue,
+  Option,
 } from './core/createStore';
 
 export {
@@ -20,4 +21,5 @@ export {
   UseValue,
   SetValue,
   GetValue,
+  Option,
 };
