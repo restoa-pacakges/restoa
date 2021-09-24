@@ -1,6 +1,6 @@
 {
   "name": "restoa",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "",
   "main": "lib/restoa.js",
   "unpkg": "dist/restoa.js",

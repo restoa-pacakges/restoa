@@ -17,12 +17,18 @@ import {
   GetValue,
   Option,
 } from './core/createStore';
-import { createView, GetView } from './core/createView';
+import {
+  createView,
+  GetView,
+  createAsyncView,
+  GetAsyncView,
+} from './core/createView';
 
 export {
   createStore,
   createBehavior,
   createView,
+  createAsyncView,
   GetValueHook,
   SetValueHook,
   SetValueCallback,
@@ -37,4 +43,5 @@ export {
   StopBehavior,
   Behavior,
   GetView,
+  GetAsyncView,
 };
