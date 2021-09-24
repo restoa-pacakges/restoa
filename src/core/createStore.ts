@@ -1,18 +1,12 @@
 import { useEffect, useState } from 'react';
+import {
+  getBehavior,
+  GetValueHook,
+  SetValueCallback,
+  SetValueHook,
+} from './createBehavior';
 
-export interface GetValueHook<T> {
-  (value: T, key: string): T;
-}
-
-export interface SetValueHook<T> {
-  (value: T, key: string): T;
-}
-
-export interface SetValueCallback<T> {
-  (value: T, key: string): void;
-}
-
-interface OnValue {
+export interface OnValue {
   (): void;
 }
 
@@ -81,6 +75,7 @@ export function createStore<T>(
   const onValueSet: Set<OnValue> = new Set();
 
   function setValue(next?: T | SetValueAction<T>) {
+    const behavior = getBehavior<T>(key);
     if (next === undefined) {
       value = undefined;
       onValueSet.forEach(onValue => onValue());
@@ -91,6 +86,7 @@ export function createStore<T>(
       } else {
         nextValue = next;
       }
+      nextValue = behavior.setValueHook(nextValue);
       if (setValueHook !== undefined) {
         nextValue = setValueHook(nextValue, key);
       }
@@ -100,13 +96,16 @@ export function createStore<T>(
     if (option?.setValueCallback !== undefined) {
       option.setValueCallback(value || getIntializedValue(), key);
     }
+    behavior.setValueCallback(value || getIntializedValue());
   }
 
   function getValue() {
-    const nextValue =
-      getValueHook !== undefined
-        ? getValueHook(value || getIntializedValue(), key)
-        : value || getIntializedValue();
+    const behavior = getBehavior<T>(key);
+    let nextValue = value || getIntializedValue();
+    nextValue = behavior.getValueHook(nextValue);
+    if (getValueHook !== undefined) {
+      nextValue = getValueHook(nextValue, key);
+    }
     return nextValue;
   }
 

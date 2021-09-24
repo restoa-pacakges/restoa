@@ -1,8 +1,15 @@
 import {
-  createStore,
   GetValueHook,
-  SetValueHook,
   SetValueCallback,
+  SetValueHook,
+  BehaviorTest,
+  StartBehavior,
+  StopBehavior,
+  Behavior,
+  createBehavior,
+} from './core/createBehavior';
+import {
+  createStore,
   SetValueAction,
   LazyIntializedValue,
   UseValue,
@@ -10,9 +17,12 @@ import {
   GetValue,
   Option,
 } from './core/createStore';
+import { createView, GetView } from './core/createView';
 
 export {
   createStore,
+  createBehavior,
+  createView,
   GetValueHook,
   SetValueHook,
   SetValueCallback,
@@ -22,4 +32,9 @@ export {
   SetValue,
   GetValue,
   Option,
+  BehaviorTest,
+  StartBehavior,
+  StopBehavior,
+  Behavior,
+  GetView,
 };
