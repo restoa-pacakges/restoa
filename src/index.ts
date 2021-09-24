@@ -18,17 +18,17 @@ import {
   Option,
 } from './core/createStore';
 import {
-  createView,
-  GetView,
-  createAsyncView,
-  GetAsyncView,
-} from './core/createView';
+  createQuery,
+  Query,
+  createAsyncQuery,
+  AsyncQuery,
+} from './core/createQuery';
 
 export {
   createStore,
   createBehavior,
-  createView,
-  createAsyncView,
+  createQuery,
+  createAsyncQuery,
   GetValueHook,
   SetValueHook,
   SetValueCallback,
@@ -42,6 +42,6 @@ export {
   StartBehavior,
   StopBehavior,
   Behavior,
-  GetView,
-  GetAsyncView,
+  Query,
+  AsyncQuery,
 };

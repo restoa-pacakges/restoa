@@ -2,18 +2,15 @@ import { useEffect, useState } from 'react';
 import { createBehavior, UseValue } from '..';
 import { OnValue } from './createStore';
 
-export interface GetView<T> {
+export interface Query<T> {
   (): T;
 }
 
-export interface GetAsyncView<T> {
+export interface AsyncQuery<T> {
   (): Promise<T>;
 }
 
-export function createView<T>(
-  getView: GetView<T>,
-  keys: string[],
-): UseValue<T> {
+export function createQuery<T>(query: Query<T>, keys: string[]): UseValue<T> {
   const onValueSet: Set<OnValue> = new Set();
 
   function test(key: string) {
@@ -35,12 +32,12 @@ export function createView<T>(
     return unsubscribe;
   }
   function useView() {
-    const [state, setState] = useState<T>(getView());
+    const [state, setState] = useState<T>(query());
 
     useEffect(() => {
       startBehavior();
       function onValue() {
-        setState(getView());
+        setState(query());
       }
       const unsubscribe = subscribe(onValue);
       return unsubscribe;
@@ -52,8 +49,8 @@ export function createView<T>(
   return useView;
 }
 
-export function createAsyncView<T>(
-  getAsyncView: GetAsyncView<T>,
+export function createAsyncQuery<T>(
+  asyncQuery: AsyncQuery<T>,
   keys: string[],
 ): UseValue<T | undefined> {
   const onValueSet: Set<OnValue> = new Set();
@@ -80,10 +77,10 @@ export function createAsyncView<T>(
     const [state, setState] = useState<T>();
 
     useEffect(() => {
-      Promise.resolve(getAsyncView()).then(setState);
+      Promise.resolve(asyncQuery()).then(setState);
       startBehavior();
       function onValue() {
-        Promise.resolve(getAsyncView()).then(setState);
+        Promise.resolve(asyncQuery()).then(setState);
       }
       const unsubscribe = subscribe(onValue);
       return unsubscribe;
