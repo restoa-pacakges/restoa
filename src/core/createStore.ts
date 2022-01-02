@@ -6,6 +6,16 @@ import {
   SetValueHook,
 } from './createBehavior';
 
+export interface Log {
+  text: string;
+}
+export interface Information {
+  key: string;
+  transactionId: number;
+  activated: boolean;
+  updated: Date | null;
+  log: Log | null;
+}
 export interface OnValue {
   (): void;
 }
@@ -33,7 +43,7 @@ export interface GetValue<T> {
   (): T;
 }
 
-export interface LazyIntializedValue<T> {
+export interface LazyInitializedValue<T> {
   (): T;
 }
 
@@ -46,9 +56,9 @@ function isSetValueAction<T>(
   return false;
 }
 
-function isLazyIntializedValue<T>(
-  next: T | LazyIntializedValue<T>,
-): next is LazyIntializedValue<T> {
+function isLazyInitializedValue<T>(
+  next: T | LazyInitializedValue<T>,
+): next is LazyInitializedValue<T> {
   if (typeof next === 'function') {
     return true;
   }
@@ -56,21 +66,42 @@ function isLazyIntializedValue<T>(
 }
 
 export function createStore<T>(
-  initialValue: T | LazyIntializedValue<T>,
+  initialValue: T | LazyInitializedValue<T>,
   option?: Option<T>,
 ): [UseValue<T>, SetValue<T>, GetValue<T>] {
-  function getIntializedValue() {
-    if (isLazyIntializedValue(initialValue)) {
-      return initialValue();
+  function logTransaction(log?: string) {
+    information.updated = new Date();
+    information.transactionId++;
+    if (log !== undefined) {
+      information.log = {
+        text: log,
+      };
     } else {
-      return initialValue;
+      information.log = null;
     }
+  }
+
+  function getIntializedValue() {
+    const next = isLazyInitializedValue(initialValue)
+      ? initialValue()
+      : initialValue;
+    logTransaction('Initialize');
+    return next;
   }
 
   const key = option?.key || `store-${Math.random()}`;
   const getValueHook = option?.getValueHook;
   const setValueHook = option?.setValueHook;
+  let activatedHookIds: string[] = [];
   let value: T | undefined;
+
+  const information: Information = {
+    key,
+    transactionId: 0,
+    activated: false,
+    updated: null,
+    log: null,
+  };
 
   const onValueSet: Set<OnValue> = new Set();
 
@@ -78,6 +109,7 @@ export function createStore<T>(
     const behavior = getBehavior<T>(key);
     if (next === undefined) {
       value = undefined;
+      logTransaction();
       onValueSet.forEach(onValue => onValue());
     } else {
       let nextValue = value;
@@ -91,6 +123,7 @@ export function createStore<T>(
         nextValue = setValueHook(nextValue, key);
       }
       value = nextValue;
+      logTransaction();
       onValueSet.forEach(onValue => onValue());
     }
     if (option?.setValueCallback !== undefined) {
@@ -119,7 +152,7 @@ export function createStore<T>(
     return unsubscribe;
   }
 
-  function useValue() {
+  function useValue(hookId: string = `hook-${Math.random}`) {
     const [state, setState] = useState<T>(value || getIntializedValue());
 
     useEffect(() => {
@@ -130,6 +163,17 @@ export function createStore<T>(
       const unsubscribe = subscribe(onValue);
       return unsubscribe;
     }, []);
+
+    useEffect(() => {
+      activatedHookIds.push(hookId);
+      information.activated = true;
+      return () => {
+        if (activatedHookIds.includes(hookId)) {
+          activatedHookIds = activatedHookIds.filter(c => c !== hookId);
+        }
+        information.activated = activatedHookIds.length > 0;
+      };
+    }, [hookId]);
 
     return state;
   }
