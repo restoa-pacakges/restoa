@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useDebugValue, useEffect, useState } from 'react';
 import {
   getBehavior,
   GetValueHook,
@@ -6,15 +6,19 @@ import {
   SetValueHook,
 } from './createBehavior';
 
-export interface Log {
-  text: string;
+export interface Log<T> {
+  key: string;
+  value: T;
+  text: string | null;
+  transactionId: number;
+  updated: Date;
 }
 export interface Information {
   key: string;
   transactionId: number;
   activated: boolean;
   updated: Date | null;
-  log: Log | null;
+  log: string | null;
 }
 export interface OnValue {
   (): void;
@@ -28,7 +32,7 @@ export interface Option<T> {
 }
 
 export interface UseValue<T> {
-  (): T;
+  (hookId?: string): T;
 }
 
 export interface SetValueAction<T> {
@@ -69,33 +73,13 @@ export function createStore<T>(
   initialValue: T | LazyInitializedValue<T>,
   option?: Option<T>,
 ): [UseValue<T>, SetValue<T>, GetValue<T>] {
-  function logTransaction(log?: string) {
-    information.updated = new Date();
-    information.transactionId++;
-    if (log !== undefined) {
-      information.log = {
-        text: log,
-      };
-    } else {
-      information.log = null;
-    }
-  }
-
-  function getIntializedValue() {
-    const next = isLazyInitializedValue(initialValue)
-      ? initialValue()
-      : initialValue;
-    logTransaction('Initialize');
-    return next;
-  }
-
   const key = option?.key || `store-${Math.random()}`;
   const getValueHook = option?.getValueHook;
   const setValueHook = option?.setValueHook;
   let activatedHookIds: string[] = [];
   let value: T | undefined;
 
-  const information: Information = {
+  let information: Information = {
     key,
     transactionId: 0,
     activated: false,
@@ -103,38 +87,86 @@ export function createStore<T>(
     log: null,
   };
 
+  function updateInformation(next: Partial<Information>, log?: string) {
+    information = {
+      ...information,
+      ...next,
+      transactionId: information.transactionId++,
+      updated: new Date(),
+      log: log || null,
+    };
+    logTransaction(log);
+  }
+
+  function logTransaction(text?: string) {
+    if (
+      value !== undefined &&
+      information.updated !== null &&
+      text !== undefined
+    ) {
+      const log: Log<T> = {
+        key,
+        text,
+        value,
+        transactionId: information.transactionId,
+        updated: information.updated,
+      };
+      const behavior = getBehavior(key);
+    }
+  }
+
+  function getValueOrInitializeValue() {
+    const next = value || getInitializedValue();
+    if (value !== next) {
+      value = next;
+      updateInformation({}, 'Initialize');
+    }
+    return next;
+  }
+
+  function getInitializedValue() {
+    const next = isLazyInitializedValue(initialValue)
+      ? initialValue()
+      : initialValue;
+    return next;
+  }
+
   const onValueSet: Set<OnValue> = new Set();
 
-  function setValue(next?: T | SetValueAction<T>) {
+  function setValueCore(next: T | SetValueAction<T>, log?: string) {
     const behavior = getBehavior<T>(key);
-    if (next === undefined) {
-      value = undefined;
-      logTransaction();
-      onValueSet.forEach(onValue => onValue());
+    let nextValue = value;
+    if (isSetValueAction(next)) {
+      nextValue = next(value || getInitializedValue());
     } else {
-      let nextValue = value;
-      if (isSetValueAction(next)) {
-        nextValue = next(value || getIntializedValue());
-      } else {
-        nextValue = next;
-      }
-      nextValue = behavior.setValueHook(nextValue);
-      if (setValueHook !== undefined) {
-        nextValue = setValueHook(nextValue, key);
-      }
-      value = nextValue;
-      logTransaction();
-      onValueSet.forEach(onValue => onValue());
+      nextValue = next;
     }
+    nextValue = behavior.setValueHook(nextValue);
+    if (setValueHook !== undefined) {
+      nextValue = setValueHook(nextValue, key);
+    }
+    value = nextValue;
+    updateInformation({}, log);
+    return nextValue;
+  }
+
+  function setValue(next?: T | SetValueAction<T>, log?: string) {
+    const nextValue =
+      next === undefined
+        ? getValueOrInitializeValue()
+        : setValueCore(next, log);
+
+    onValueSet.forEach(onValue => onValue());
     if (option?.setValueCallback !== undefined) {
-      option.setValueCallback(value || getIntializedValue(), key);
+      option.setValueCallback(nextValue, key);
     }
-    behavior.setValueCallback(value || getIntializedValue());
+    const behavior = getBehavior<T>(key);
+    behavior.setValueCallback(nextValue);
   }
 
   function getValue() {
     const behavior = getBehavior<T>(key);
-    let nextValue = value || getIntializedValue();
+    let nextValue = getValueOrInitializeValue();
     nextValue = behavior.getValueHook(nextValue);
     if (getValueHook !== undefined) {
       nextValue = getValueHook(nextValue, key);
@@ -152,8 +184,8 @@ export function createStore<T>(
     return unsubscribe;
   }
 
-  function useValue(hookId: string = `hook-${Math.random}`) {
-    const [state, setState] = useState<T>(value || getIntializedValue());
+  function useValue(hookId: string = `hook-${Math.random()}`) {
+    const [state, setState] = useState<T>(getValueOrInitializeValue);
 
     useEffect(() => {
       function onValue() {
@@ -166,14 +198,16 @@ export function createStore<T>(
 
     useEffect(() => {
       activatedHookIds.push(hookId);
-      information.activated = true;
+      updateInformation({ activated: true });
       return () => {
         if (activatedHookIds.includes(hookId)) {
           activatedHookIds = activatedHookIds.filter(c => c !== hookId);
         }
-        information.activated = activatedHookIds.length > 0;
+        updateInformation({ activated: activatedHookIds.length > 0 });
       };
     }, [hookId]);
+
+    useDebugValue({ hookId, ...information, value: state });
 
     return state;
   }

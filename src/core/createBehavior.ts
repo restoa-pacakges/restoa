@@ -1,3 +1,5 @@
+import { Information, Log } from './createStore';
+
 export interface BehaviorTest {
   (key: string): boolean;
 }
@@ -26,6 +28,8 @@ export interface Behavior {
   getValueHook?: GetValueHook<any>;
   setValueHook?: SetValueHook<any>;
   setValueCallback?: SetValueCallback<any>;
+  updateInformationCalllback?: (information: Information) => void;
+  logTransactionCalllback?: (log: Log<any>) => void;
 }
 
 export interface CreateBehavior {

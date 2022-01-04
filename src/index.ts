@@ -11,7 +11,7 @@ import {
 import {
   createStore,
   SetValueAction,
-  LazyIntializedValue,
+  LazyInitializedValue,
   UseValue,
   SetValue,
   GetValue,
@@ -33,7 +33,7 @@ export {
   SetValueHook,
   SetValueCallback,
   SetValueAction,
-  LazyIntializedValue,
+  LazyInitializedValue,
   UseValue,
   SetValue,
   GetValue,
