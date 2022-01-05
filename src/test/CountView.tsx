@@ -1,5 +1,6 @@
 import React from 'react';
 import { createStore } from '..';
+import './DevTools';
 
 type Count = number;
 

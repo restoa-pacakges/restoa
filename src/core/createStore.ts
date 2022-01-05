@@ -4,6 +4,7 @@ import {
   GetValueHook,
   SetValueCallback,
   SetValueHook,
+  UpdateInformation,
 } from './createBehavior';
 
 export interface Log<T> {
@@ -29,6 +30,7 @@ export interface Option<T> {
   getValueHook?: GetValueHook<T>;
   setValueHook?: SetValueHook<T>;
   setValueCallback?: SetValueCallback<T>;
+  updateInformation?: UpdateInformation<T>;
 }
 
 export interface UseValue<T> {
@@ -76,6 +78,7 @@ export function createStore<T>(
   const key = option?.key || `store-${Math.random()}`;
   const getValueHook = option?.getValueHook;
   const setValueHook = option?.setValueHook;
+  const updateInformationCallback = option?.updateInformation;
   let activatedHookIds: string[] = [];
   let value: T | undefined;
 
@@ -91,27 +94,12 @@ export function createStore<T>(
     information = {
       ...information,
       ...next,
-      transactionId: information.transactionId++,
-      updated: new Date(),
       log: log || null,
     };
-    logTransaction(log);
-  }
-
-  function logTransaction(text?: string) {
-    if (
-      value !== undefined &&
-      information.updated !== null &&
-      text !== undefined
-    ) {
-      const log: Log<T> = {
-        key,
-        text,
-        value,
-        transactionId: information.transactionId,
-        updated: information.updated,
-      };
-      const behavior = getBehavior(key);
+    const behavior = getBehavior<T>(key);
+    behavior.updateInformation(information, value);
+    if (updateInformationCallback !== undefined) {
+      updateInformationCallback(information, value);
     }
   }
 
@@ -119,7 +107,13 @@ export function createStore<T>(
     const next = value || getInitializedValue();
     if (value !== next) {
       value = next;
-      updateInformation({}, 'Initialize');
+      updateInformation(
+        {
+          transactionId: information.transactionId + 1,
+          updated: new Date(),
+        },
+        'Initialize',
+      );
     }
     return next;
   }
@@ -146,7 +140,13 @@ export function createStore<T>(
       nextValue = setValueHook(nextValue, key);
     }
     value = nextValue;
-    updateInformation({}, log);
+    updateInformation(
+      {
+        transactionId: information.transactionId + 1,
+        updated: new Date(),
+      },
+      log,
+    );
     return nextValue;
   }
 

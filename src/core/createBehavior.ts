@@ -1,4 +1,4 @@
-import { Information, Log } from './createStore';
+import { Information } from './createStore';
 
 export interface BehaviorTest {
   (key: string): boolean;
@@ -9,6 +9,14 @@ export interface StartBehavior {
 }
 
 export interface StopBehavior {
+  (): void;
+}
+
+export interface OnStartBehavior {
+  (): void;
+}
+
+export interface OnStopBehavior {
   (): void;
 }
 
@@ -24,12 +32,15 @@ export interface SetValueCallback<T> {
   (value: T, key: string): void;
 }
 
+export interface UpdateInformation<T> {
+  (information: Information, value?: T): void;
+}
+
 export interface Behavior {
   getValueHook?: GetValueHook<any>;
   setValueHook?: SetValueHook<any>;
   setValueCallback?: SetValueCallback<any>;
-  updateInformationCalllback?: (information: Information) => void;
-  logTransactionCalllback?: (log: Log<any>) => void;
+  updateInformation?: UpdateInformation<any>;
 }
 
 export interface CreateBehavior {
@@ -41,6 +52,7 @@ export interface GetBehavior<T> {
     getValueHook: GetValueHook<T>;
     setValueHook: SetValueHook<T>;
     setValueCallback: SetValueCallback<T>;
+    updateInformation: UpdateInformation<T>;
   };
 }
 
@@ -92,16 +104,34 @@ function createSetValueCallback<T>(
   };
 }
 
+function createUpdateInformation<T>(
+  key: string,
+  updateInformationArray: BehaviorWithTest<UpdateInformation<any>>[],
+) {
+  return (information: Information, value?: T) => {
+    updateInformationArray.forEach(({ test, behavior }) => {
+      if (test(key)) {
+        behavior(information, value);
+      }
+    });
+  };
+}
+
 function createBehaviorStore() {
   const getValueHookArray: BehaviorWithTest<GetValueHook<any>>[] = [];
   const setValueHookArray: BehaviorWithTest<SetValueHook<any>>[] = [];
   const setValueCallbackArray: BehaviorWithTest<SetValueCallback<any>>[] = [];
+  const updateInformationArray: BehaviorWithTest<UpdateInformation<any>>[] = [];
 
   function getBehavior<T>(key: string) {
     return {
       getValueHook: createGetValueHook<T>(key, getValueHookArray),
       setValueHook: createSetValueHook<T>(key, setValueHookArray),
       setValueCallback: createSetValueCallback<T>(key, setValueCallbackArray),
+      updateInformation: createUpdateInformation<T>(
+        key,
+        updateInformationArray,
+      ),
     };
   }
 
@@ -134,6 +164,13 @@ function createBehaviorStore() {
         behavior: behavior.setValueCallback,
       });
     }
+    if (behavior.updateInformation !== undefined) {
+      updateInformationArray.push({
+        test: nextTest,
+        behavior: behavior.updateInformation,
+      });
+    }
+
     function startBehavior() {
       isAlive = true;
     }
